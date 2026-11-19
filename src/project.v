@@ -1,27 +1,27 @@
-/*
- * Copyright (c) 2024 Your Name
- * SPDX-License-Identifier: Apache-2.0
- */
-
 `default_nettype none
-
-module tt_um_example (
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
-    input  wire       clk,      // clock
-    input  wire       rst_n     // reset_n - low to reset
+// SPDX-License-Identifier: Apache-2.0
+module tt_um_armohamed_tdc12 (
+    input wire [7:0] ui_in,
+    output wire [7:0] uo_out,
+    input wire [7:0] uio_in,
+    output wire [7:0] uio_out,
+    output wire [7:0] uio_oe,
+    input wire ena,
+    input wire clk,
+    input wire rst_n
 );
-
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
-
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
-
+    wire [11:0] width_code;
+    wire data_valid, busy, overflow;
+    // Deselection clears state at a clock edge and releases the uio drivers.
+    wire measurement_reset_n = rst_n & ena;
+    pulse_width_tdc measurement (
+        .clk(clk), .rst_n(measurement_reset_n), .pulse_in(ui_in[0]),
+        .width_code(width_code), .data_valid(data_valid),
+        .busy(busy), .overflow(overflow)
+    );
+    assign uo_out = width_code[7:0];
+    assign uio_out = {1'b0, overflow, busy, data_valid, width_code[11:8]};
+    assign uio_oe = {1'b0, {7{ena}}};
+    wire _unused = &{ui_in[7:1], uio_in, 1'b0};
 endmodule
+`default_nettype wire
