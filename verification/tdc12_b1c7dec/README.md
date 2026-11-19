@@ -100,7 +100,7 @@ extracted. Supplies are ideal. Power-only filler/tap/decap cells are present in
 GDS/LVS but omitted from transient simulation. Full randomized coverage is
 digital; transistor PEX coverage is the directed 21 us train. SDF files are
 provided for a compatible timing-aware model/simulator flow, but were not
-backannotated into the public models, which lack specify timing arcs.
+backannotated in this original regression, which selected FUNCTIONAL models. The PDK also includes timing-enabled specify models; the sine extension uses their I/O paths with an explicit simulator adapter.
 
 ## Correct external use
 

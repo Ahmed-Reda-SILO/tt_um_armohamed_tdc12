@@ -192,7 +192,7 @@ summary={
         'Ideal power sources; no assembled-chip dynamic IR/EM, package SI, aging or silicon yield qualification.',
         'No characterized synchronizer MTBF, statistical mismatch/Monte Carlo, or clock jitter sweep.',
         'Post-layout transistor pulse train is a 21 us directed test; broad randomized coverage is digital and timing is checked separately.',
-        'No SDF-annotated gate simulation; public cell Verilog models lack specify timing arcs.',
+        'The original broad digital regression used functional unit-delay models without SDF; timing-enabled PDK specify models exist and are used in the sine extension.',
         'Direct 5 pF on tile output pins fails characterized electrical limits; external load requires GPIO path verification.']}
 assert summary['rtl_and_gate']['conversion_records_identical']
 (OUT/'verification_summary.json').write_text(json.dumps(summary,indent=2)+'\n')
@@ -265,7 +265,7 @@ para('Every data, status and output-enable voltage is plotted. These are tile te
 
 start('All digital wrapper ports','The full digital test toggles unused inputs and checks independence of every wrapper output.')
 picture('TDC_All_Ports_Digital.png',600)
-para('The initial five varied-width pulses are shown. Full conversion records contain 1064 captures, and RTL/routed records are byte-identical. Small unit-delay transitions overlap at this microsecond scale. No SDF backannotation was performed; the public standard-cell models have no specify timing arcs.',small)
+para('The initial five varied-width pulses are shown. Full conversion records contain 1064 captures, and RTL/routed records are byte-identical. Small unit-delay transitions overlap at this microsecond scale. This original regression used FUNCTIONAL unit-delay models without SDF. The PDK also provides timing-enabled specify models; the sine extension uses their timing paths.',small)
 
 start('PVT and extracted timing','10 available characterized non-CCS library points multiplied by 3 RC corners = 30 cases.')
 picture('TDC_PVT_Timing.png',318)
