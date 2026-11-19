@@ -1,5 +1,9 @@
 # 12-bit pulse-width TDC for Tiny Tapeout SKY130
 
+[![GDS and physical checks](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/gds.yaml/badge.svg?branch=main&event=push)](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/gds.yaml)
+[![RTL tests](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/test.yaml)
+[![Documentation](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/docs.yaml/badge.svg?branch=main&event=push)](https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/workflows/docs.yaml)
+
 Author: Ahmed Reda Mohamed. Top module: `tt_um_armohamed_tdc12`.
 
 This counter-based time-to-digital converter measures each positive input pulse
