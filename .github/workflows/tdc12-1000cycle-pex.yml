@@ -1,0 +1,132 @@
+name: TDC12 exact 1000-cycle BSIM and PEX
+
+on:
+  push:
+    branches: ['verification/tdc12-1000cycle-pex']
+    paths:
+      - '.github/workflows/tdc12-1000cycle-pex.yml'
+      - 'verification/bringup_1000cycle/prepare_ci.py'
+      - 'verification/bringup_1000cycle/run_spice.py'
+      - 'verification/bringup_1000cycle/plot_results.py'
+      - 'verification/bringup_1000cycle/README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tdc12-1000cycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [pre, post]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate test code and install Python dependencies
+        run: |
+          python -m py_compile verification/bringup_1000cycle/*.py
+          python -m pip install numpy matplotlib requests zstandard openlane==2.2.9
+      - name: Install extraction and compiler tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y magic netgen-lvs build-essential autoconf automake libtool libsuitesparse-dev libreadline-dev
+      - name: Compile ngspice 44.2 with KLU and OpenMP
+        shell: bash
+        run: |
+          set -euo pipefail
+          tdc_eda_prefix="$RUNNER_TEMP/tdc-eda"
+          curl -fL --retry 3 'https://downloads.sourceforge.net/project/ngspice/ng-spice-rework/old-releases/44.2/ngspice-44.2.tar.gz' -o "$RUNNER_TEMP/ngspice-44.2.tar.gz"
+          sha256sum "$RUNNER_TEMP/ngspice-44.2.tar.gz"
+          tar -xzf "$RUNNER_TEMP/ngspice-44.2.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/ngspice-44.2"
+          ./configure --prefix="$tdc_eda_prefix" --with-x=no --with-readline=no --enable-xspice --enable-cider --enable-openmp --with-klu --disable-debug > "$RUNNER_TEMP/ngspice-configure.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ngspice-configure.log"; exit 1; }
+          make -j2 > "$RUNNER_TEMP/ngspice-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ngspice-build.log"; exit 1; }
+          make install > "$RUNNER_TEMP/ngspice-install.log" 2>&1
+          ln -sf "$(command -v netgen-lvs)" "$tdc_eda_prefix/bin/netgen"
+          echo "$tdc_eda_prefix/bin" >> "$GITHUB_PATH"
+          "$tdc_eda_prefix/bin/ngspice" -v
+      - name: Recover exact official GDS and routed artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python verification/bringup_1000cycle/prepare_ci.py
+      - name: Fetch checksum-verified exact PDK
+        run: python verification/tdc12_b1c7dec/scripts/fetch_exact_pdk.py
+      - name: Extract actual GDS devices and verify LVS
+        if: matrix.stage == 'post'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -n 1024
+          export PDK_ROOT="$GITHUB_WORKSPACE/verification/.tooling/pdk_8afc8346"
+          python verification/tdc12_b1c7dec/scripts/extract_gds_devices.py --pdk-root "$PDK_ROOT"
+          python verification/tdc12_b1c7dec/scripts/run_device_lvs.py --pdk-root "$PDK_ROOT"
+      - name: Run the complete transistor transient and check all wrapper outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PDK_ROOT="$GITHUB_WORKSPACE/verification/.tooling/pdk_8afc8346"
+          tdc_stage='${{ matrix.stage }}'
+          tdc_extra=()
+          if [ "$tdc_stage" = pre ]; then tdc_extra+=(--prelayout); fi
+          python verification/bringup_1000cycle/run_spice.py --root verification/tdc12_b1c7dec --pdk-root "$PDK_ROOT" "${tdc_extra[@]}"
+      - name: Preserve measured data, executed decks and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdc12-${{ matrix.stage }}-raw
+          path: verification/tdc12_b1c7dec/reports/bringup_1000cycle/
+          retention-days: 90
+          compression-level: 6
+          include-hidden-files: true
+          if-no-files-found: warn
+
+  plot:
+    if: always()
+    needs: simulate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: verification/tdc12-1000cycle-pex
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy matplotlib
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tdc12-*-raw
+          merge-multiple: true
+          path: verification/bringup_1000cycle/runs
+      - name: Plot the measured full-length pre and post results
+        run: python verification/bringup_1000cycle/plot_results.py
+      - name: Preserve complete plot and result package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDC12-1000cycle-Pre-Post-PEX-Results
+          path: verification/bringup_1000cycle/results/
+          retention-days: 90
+      - name: Save reviewable figures and compact measured records on verification branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f verification/bringup_1000cycle/results
+          if ! git diff --cached --quiet; then
+            git commit -m 'Save measured TDC12 1000-cycle pre/post-layout results'
+            git push origin HEAD:verification/tdc12-1000cycle-pex
+          fi
