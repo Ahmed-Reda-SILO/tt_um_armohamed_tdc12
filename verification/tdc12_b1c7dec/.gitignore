@@ -1,0 +1,10 @@
+/src/
+/build/
+/reports/
+/deliverables/
+/official_artifacts/
+/input_artifacts/
+/tt_submission/
+/output/
+/test/tdc_tb.sv
+__pycache__/
