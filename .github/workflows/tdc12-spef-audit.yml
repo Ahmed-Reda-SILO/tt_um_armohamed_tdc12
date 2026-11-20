@@ -1,0 +1,54 @@
+name: Audit exact nominal SPEF coupling entries
+on:
+  push:
+    branches: ['verification/tdc12-1000cycle-pex']
+    paths: ['.github/workflows/tdc12-spef-audit.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Inspect original hash-verified SPEF
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import urllib.request,os,hashlib,zipfile,io,json,collections,pathlib
+          repo='Ahmed-Reda-SILO/tt_um_armohamed_tdc12'
+          req=urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/artifacts/14521327696/zip',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          data=urllib.request.urlopen(req,timeout=180).read()
+          digest=hashlib.sha256(data).hexdigest()
+          assert digest=='952a299af36d01275f855d8b7e26f49d5091e078681d8da6b15929eda6e263be'
+          z=zipfile.ZipFile(io.BytesIO(data))
+          paths=[x for x in z.namelist() if '/final/spef/nom/' in x and x.endswith('.spef')]
+          assert len(paths)==1,paths
+          raw=z.read(paths[0]);text=raw.decode();section='';owner='';rows=[];ground=0;res=0
+          for line in text.splitlines():
+              t=line.split()
+              if not t:continue
+              if t[0]=='*D_NET':owner=t[1]
+              if t[0] in ['*D_NET','*CONN','*CAP','*RES','*END']:section=t[0];continue
+              if section=='*CAP' and t[0].isdigit():
+                  if len(t)==4 and float(t[-1])>0:rows.append({'owner':owner,'a':t[1],'b':t[2],'pf':float(t[-1])})
+                  elif len(t)==3 and float(t[-1])>0:ground+=1
+              if section=='*RES' and t[0].isdigit():res+=1
+          groups=collections.defaultdict(list)
+          for row in rows:groups[tuple(sorted((row['a'],row['b'])))].append(row)
+          duplicate=[v for v in groups.values() if len(v)>1]
+          invalid=[v for v in duplicate if len(v)!=2 or len({r['owner'] for r in v})!=2 or len({r['pf'] for r in v})!=1]
+          result={'artifact_sha256':digest,'spef_member':paths[0],'spef_sha256':hashlib.sha256(raw).hexdigest(),'header':text.split('*NAME_MAP')[0],'positive_ground_cap_rows':ground,'resistor_rows':res,'positive_coupling_rows':len(rows),'unique_coupling_endpoint_pairs':len(groups),'duplicated_pairs':len(duplicate),'invalid_duplicate_groups':invalid[:10],'raw_coupling_pf_sum':sum(r['pf'] for r in rows),'unique_coupling_pf_sum':sum(v[0]['pf'] for v in groups.values()),'duplicate_examples':duplicate[:10]}
+          out=pathlib.Path('verification/bringup_1000cycle/spef_audit.json');out.write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          PY
+      - name: Save coupling audit on verification branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add verification/bringup_1000cycle/spef_audit.json
+          git commit -m 'Record independent audit of original SPEF coupling entries'
+          git pull --rebase origin verification/tdc12-1000cycle-pex
+          git push origin HEAD:verification/tdc12-1000cycle-pex
