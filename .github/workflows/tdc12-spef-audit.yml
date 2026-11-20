@@ -12,15 +12,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests
       - name: Inspect original hash-verified SPEF
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
-          import urllib.request,os,hashlib,zipfile,io,json,collections,pathlib
+          import requests,os,hashlib,zipfile,io,json,collections,pathlib
           repo='Ahmed-Reda-SILO/tt_um_armohamed_tdc12'
-          req=urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/artifacts/14521327696/zip',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-          data=urllib.request.urlopen(req,timeout=180).read()
+          response=requests.get(f'https://api.github.com/repos/{repo}/actions/artifacts/14521327696/zip',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'},timeout=180)
+          response.raise_for_status();data=response.content
           digest=hashlib.sha256(data).hexdigest()
           assert digest=='952a299af36d01275f855d8b7e26f49d5091e078681d8da6b15929eda6e263be'
           z=zipfile.ZipFile(io.BytesIO(data))
