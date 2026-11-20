@@ -1,4 +1,4 @@
-name: TDC12 exact 1000-cycle BSIM and PEX
+name: TDC12 full PEX recovery and pre-post plots
 
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: tdc12-1000cycle-${{ github.ref }}
+  group: tdc12-1000cycle-post-recovery-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stage: [pre, post]
+        stage: [post]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
@@ -39,7 +39,7 @@ jobs:
       - name: Install extraction and compiler tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y magic netgen-lvs build-essential autoconf automake libtool libsuitesparse-dev libreadline-dev
+          sudo apt-get install -y magic netgen-lvs build-essential autoconf automake libtool libsuitesparse-dev libreadline-dev tcl-dev tk-dev libx11-dev libxext-dev libcairo2-dev libgl1-mesa-dev libglu1-mesa-dev
       - name: Compile ngspice 44.2 with KLU and OpenMP
         shell: bash
         run: |
@@ -52,9 +52,29 @@ jobs:
           ./configure --prefix="$tdc_eda_prefix" --with-x=no --with-readline=no --enable-xspice --enable-cider --enable-openmp --with-klu --disable-debug > "$RUNNER_TEMP/ngspice-configure.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ngspice-configure.log"; exit 1; }
           make -j2 > "$RUNNER_TEMP/ngspice-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ngspice-build.log"; exit 1; }
           make install > "$RUNNER_TEMP/ngspice-install.log" 2>&1
-          ln -sf "$(command -v netgen-lvs)" "$tdc_eda_prefix/bin/netgen"
+          # Magic and Netgen are built from compatible pinned source below.
           echo "$tdc_eda_prefix/bin" >> "$GITHUB_PATH"
           "$tdc_eda_prefix/bin/ngspice" -v
+      - name: Build PDK-compatible Magic and Netgen from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          tdc_eda_prefix="$RUNNER_TEMP/tdc-eda"
+          curl -fL --retry 3 --connect-timeout 30 --max-time 180 'https://github.com/RTimothyEdwards/magic/archive/1d42dfcdf6cd91df7a59198477324c2ca78ba439.tar.gz' -o "$RUNNER_TEMP/magic.tar.gz"
+          tar -xzf "$RUNNER_TEMP/magic.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/magic-1d42dfcdf6cd91df7a59198477324c2ca78ba439"
+          cat VERSION
+          ./configure --prefix="$tdc_eda_prefix" --with-tcl --without-x --without-opengl --disable-readline > "$RUNNER_TEMP/magic-configure.log" 2>&1 || { tail -100 "$RUNNER_TEMP/magic-configure.log"; exit 1; }
+          make -j2 > "$RUNNER_TEMP/magic-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/magic-build.log"; exit 1; }
+          make install > "$RUNNER_TEMP/magic-install.log" 2>&1
+          curl -fL --retry 3 --connect-timeout 30 --max-time 180 'https://github.com/RTimothyEdwards/netgen/archive/e2a49567d5e3e451d51130de0227678be31f32e0.tar.gz' -o "$RUNNER_TEMP/netgen.tar.gz"
+          tar -xzf "$RUNNER_TEMP/netgen.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/netgen-e2a49567d5e3e451d51130de0227678be31f32e0"
+          cat VERSION
+          ./configure --prefix="$tdc_eda_prefix" > "$RUNNER_TEMP/netgen-configure.log" 2>&1 || { tail -100 "$RUNNER_TEMP/netgen-configure.log"; exit 1; }
+          make -j2 > "$RUNNER_TEMP/netgen-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/netgen-build.log"; exit 1; }
+          make install > "$RUNNER_TEMP/netgen-install.log" 2>&1
+          "$tdc_eda_prefix/bin/magic" --version
       - name: Recover exact official GDS and routed artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -111,7 +131,16 @@ jobs:
           pattern: tdc12-*-raw
           merge-multiple: true
           path: verification/bringup_1000cycle/runs
+      - name: Recover the already-running full pre-layout data
+        uses: actions/download-artifact@v4
+        with:
+          name: tdc12-pre-raw
+          run-id: 44799177056
+          github-token: ${{ github.token }}
+          path: verification/bringup_1000cycle/runs
       - name: Plot the measured full-length pre and post results
+        env:
+          TDC_PRE_RUN_ID: '44799177056'
         run: python verification/bringup_1000cycle/plot_results.py
       - name: Preserve complete plot and result package
         uses: actions/upload-artifact@v4

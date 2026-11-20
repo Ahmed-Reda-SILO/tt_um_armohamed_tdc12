@@ -104,7 +104,7 @@ with PdfPages(OUT/'TDC12_1000cycle_Pre_Post_Plots.pdf') as pdf:
  for f in figures:pdf.savefig(f,bbox_inches='tight')
 for f in figures:plt.close(f)
 summary={'all_passed':all(c['passed'] for c in cases.values()),'pre':cases['pre'],'post':cases['post'],
- 'github_run_id':os.environ.get('GITHUB_RUN_ID'),'github_run_url':os.environ.get('GITHUB_SERVER_URL','https://github.com')+'/'+os.environ.get('GITHUB_REPOSITORY','Ahmed-Reda-SILO/tt_um_armohamed_tdc12')+'/actions/runs/'+os.environ.get('GITHUB_RUN_ID','')}
+ 'pre_github_run_id':os.environ.get('TDC_PRE_RUN_ID',os.environ.get('GITHUB_RUN_ID')),'post_github_run_id':os.environ.get('GITHUB_RUN_ID'),'github_run_id':os.environ.get('GITHUB_RUN_ID'),'github_run_url':os.environ.get('GITHUB_SERVER_URL','https://github.com')+'/'+os.environ.get('GITHUB_REPOSITORY','Ahmed-Reda-SILO/tt_um_armohamed_tdc12')+'/actions/runs/'+os.environ.get('GITHUB_RUN_ID','')}
 (OUT/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 rows=[{'stage':s,**c} for s in cases for c in cases[s]['conversions']]
 with (OUT/'conversions.csv').open('w') as f:
@@ -123,7 +123,7 @@ lines+=['',f"Overall test passed: **{summary['all_passed']}**. Actual measured v
 '', 'All 24 wrapper outputs are checked at 1070 clock samples per model. Hardware capture is an ideal external sampling checker of actual analog node voltages, not a simulated physical board receiver.',
 '', 'Scope: all 108 pre-layout or 139 routed active macro cells, including the wrapper. Post-layout uses actual GDS MOS geometry, cell metal capacitance and nominal OpenRCX intercell R/C. Supplies are ideal; power-only cells are omitted. Intracell metal resistance and assembled shared mux/pads/package/PCB are outside this extraction.',
 '', 'An earlier exploratory coarse-timestep pre-layout run produced 1016. A targeted carry test passed with the original finer settings; this workflow therefore reruns both full models using those finer controls. The exploratory result is not a pass result or a confirmed silicon defect.',
-'', f"Raw data, decks and logs: {summary['github_run_url']} (artifacts tdc12-pre-raw and tdc12-post-raw).",
+'', f"Post-layout raw data and decks: {summary['github_run_url']} (artifact tdc12-post-raw).", f"Pre-layout raw data and decks: https://github.com/Ahmed-Reda-SILO/tt_um_armohamed_tdc12/actions/runs/{summary['pre_github_run_id']} (artifact tdc12-pre-raw).",
 '', '![Full trace](plots/01_1000cycle_pre_post_overview.png)','',
 '![Capture and readout](plots/03_1000count_capture_zoom.png)']
 (OUT/'README.md').write_text('\n'.join(lines)+'\n')
