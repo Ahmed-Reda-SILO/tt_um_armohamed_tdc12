@@ -37,7 +37,7 @@ for m in re.finditer(r'^\.subckt\s+(\S+)\s*([^\n]*)\n(.*?)^\.ends[^\n]*',spice,r
 # SPEF is the routed wire network; a node denotes a port, cell pin, or wire point.
 spef=[] if a.prelayout else next((final/'spef'/a.rc).glob('*.spef')).read_text().splitlines()
 if not a.prelayout:assert '*C_UNIT 1 PF' in spef and '*R_UNIT 1 OHM' in spef
-names={};pins={};elements=[];section='';nodes={'VGND':'0','VNB':'0','VPWR':'vdd','VPB':'vdd'}
+names={};pins={};elements=[];section='';dnet='';coupling_seen={};coupling_rows=0;ground_caps=0;nodes={'VGND':'0','VNB':'0','VPWR':'vdd','VPB':'vdd'}
 def expand(t):
  m=re.fullmatch(r'\*(\d+)(:.*)?',t)
  return names[m[1]]+(m[2] or '') if m else t
@@ -51,6 +51,7 @@ for line in spef:
  t=line.split()
  if not t:continue
  if t[0]=='*NAME_MAP':section='names';continue
+ if t[0]=='*D_NET':dnet=expand(t[1])
  if t[0] in ['*PORTS','*D_NET','*CONN','*CAP','*RES','*END']:
   section=t[0];continue
  if section=='names' and re.fullmatch(r'\*\d+',t[0]):names[t[0][1:]]=t[1]
@@ -58,8 +59,29 @@ for line in spef:
   full=expand(t[1]);inst,pin=full.rsplit(':',1);pins[(inst,pin)]=node(full)
  elif section=='*CAP' and t[0].isdigit():
   val=float(t[-1])
-  if val>0:elements.append(('C',node(t[1]),node(t[2]) if len(t)==4 else '0',val*1e-12))
+  if val<=0:continue
+  n1=node(t[1]);n2=node(t[2]) if len(t)==4 else '0'
+  if len(t)==4:
+   coupling_rows+=1
+   key=tuple(sorted((n1,n2)))
+   if key in coupling_seen:
+    previous=coupling_seen[key]
+    assert previous['owner']!=dnet and previous['copies']==1, 'Ambiguous repeated coupling in one net'
+    assert previous['value_pf']==val, 'Reciprocal SPEF coupling values disagree'
+    previous['copies']+=1
+    continue
+   coupling_seen[key]={'owner':dnet,'value_pf':val,'copies':1}
+  else:ground_caps+=1
+  elements.append(('C',n1,n2,val*1e-12))
  elif section=='*RES' and t[0].isdigit():elements.append(('R',node(t[1]),node(t[2]),max(float(t[3]),1e-6)))
+# OpenRCX writes every coupling at full value under both connected D_NETs.
+# Instantiate one physical capacitor, retaining both SPEF entries as a check.
+assert all(x['copies']==2 for x in coupling_seen.values()), 'Full SPEF must contain reciprocal couplings'
+spef_stats={'source_positive_coupling_rows':coupling_rows,'unique_physical_couplings':len(coupling_seen),
+ 'reciprocal_rows_skipped':coupling_rows-len(coupling_seen),'ground_capacitors':ground_caps,
+ 'resistors':sum(x[0]=='R' for x in elements),
+ 'unique_coupling_pf_sum':sum(x['value_pf'] for x in coupling_seen.values())}
+(out/'spef_conversion.json').write_text(json.dumps(spef_stats,indent=2)+'\n')
 # Instantiate exactly the routed logical cells, with extracted pin positions.
 verilog=netlist_path.read_text();insts=[];ignored=[]
 for m in re.finditer(r'\b(sky130_\w+)\s+(\\\S+|\w+)\s*\((.*?)\);',verilog,re.S):
@@ -173,7 +195,7 @@ summary={'stage':'pre' if a.prelayout else 'post','passed':not errors and all(x[
  'gds_sha256':'2c66650721f9d8c3d54b18e39038064a20b95f048d1b69d987ed50766105bd40',
  'clock_hz':1000000,'corner':a.corner,'vdd_v':a.vdd,'temperature_c':a.temperature,
  'tstep_ns':2,'max_timestep_ns':20,'continuous_transient_us':float(t[-1]*1e6),'pause_resume_used':False,
- 'active_cells':len(insts),'rc_elements':len(wires),'omitted_power_only_cells':len(ignored),
+ 'active_cells':len(insts),'rc_elements':len(wires),'spef_conversion':spef_stats,'omitted_power_only_cells':len(ignored),
  'load_pf_per_output':a.load_pf,'checked_clock_samples':len(checks),'wrapper_outputs_checked':24,
  'conversions':conversions,'errors':errors,'analog_rows':len(data),'wall_seconds':wall,
  'input_hashes':input_hashes,'deck_sha256':hashlib.sha256((out/'tdc.cir').read_bytes()).hexdigest(),

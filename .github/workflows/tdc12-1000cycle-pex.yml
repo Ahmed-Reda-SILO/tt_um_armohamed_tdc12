@@ -1,4 +1,4 @@
-name: TDC12 full PEX recovery and pre-post plots
+name: TDC12 full PEX with audited coupling and pre-post plots
 
 on:
   push:
@@ -159,3 +159,11 @@ jobs:
             git commit -m 'Save measured TDC12 1000-cycle pre/post-layout results'
             git push origin HEAD:verification/tdc12-1000cycle-pex
           fi
+      - name: Require both measured tests to pass
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('verification/bringup_1000cycle/results/summary.json')
+          s=json.loads(p.read_text())
+          assert s['all_passed'], 'Measured pre/post waveform checks failed; results remain preserved for review'
+          PY
