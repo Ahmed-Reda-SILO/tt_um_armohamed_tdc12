@@ -1,0 +1,12 @@
+{
+  "meta": {"version": 2},
+  "DESIGN_NAME": "pulse_width_tdc",
+  "VERILOG_FILES": ["dir::../../src/pulse_width_tdc.v"],
+  "CLOCK_PORT": "clk",
+  "CLOCK_PERIOD": 1000,
+  "FP_SIZING": "absolute",
+  "DIE_AREA": [0, 0, 161, 111.52],
+  "PL_TARGET_DENSITY_PCT": 35,
+  "VDD_NETS": ["VPWR"],
+  "GND_NETS": ["VGND"]
+}
