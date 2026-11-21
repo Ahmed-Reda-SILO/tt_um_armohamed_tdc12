@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          openlane --dockerized --pdk-root "$GITHUB_WORKSPACE/verification/.tooling/pdk_8afc8346" --manual-pdk --pdk sky130A --run-tag core_reference verification/academic_layout/config.json
+          docker run --rm -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" ghcr.io/efabless/openlane2:2.2.9 openlane --pdk-root "$GITHUB_WORKSPACE/verification/.tooling/pdk_8afc8346" --manual-pdk --pdk sky130A --run-tag core_reference verification/academic_layout/config.json
       - name: Preserve the independent core layout and checks
         if: always()
         uses: actions/upload-artifact@v4
@@ -35,3 +35,4 @@ jobs:
           path: verification/academic_layout/
           retention-days: 90
           compression-level: 6
+
