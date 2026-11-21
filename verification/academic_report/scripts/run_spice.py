@@ -141,11 +141,11 @@ wires=[f'{kind}wire{i} {n1} {n2} {val:.15g}' for i,(kind,n1,n2,val) in enumerate
 assert not a.ideal_wire,'No ideal wire substitution is permitted for the extracted comparison'
 lines=['* TDC12 academic report matched continuous BSIM test '+a.case,
  f'.lib "{pdk}/libs.tech/ngspice/sky130.lib.spice" {a.corner}',f'.temp {a.temperature}',
- '.option scale=1u method=gear reltol=1e-4 abstol=1e-12 vntol=1e-6',f'VDD vdd 0 {a.vdd}']
+ '.option scale=1u method=gear reltol=1e-4 abstol=1e-12 vntol=1e-6',f'VDD vdd 0 {a.vdd}','Vbench_ground ground_probe 0 0']
 lines.extend(v[1] for v in subs.values())
 lines.extend(insts);lines.extend(wires);lines.extend(sources);lines.extend(loads)
 vecs=['v('+n+')' for n in outputs]+['v('+node('clk')+')','v('+node('ui_in[0]')+')','v('+node('rst_n')+')','v('+node('ena')+')','i(VDD)']
-vecs += ['v('+node(n)+')' for n in unused]+['v(vdd)','v(0)']
+vecs += ['v('+node(n)+')' for n in unused]+['v(vdd)','v(ground_probe)']
 columns=['time_s']+[f'uo_out[{i}]_V' for i in range(8)]+[f'uio_out[{i}]_V' for i in range(8)]+[f'uio_oe[{i}]_V' for i in range(8)]
 columns += ['clk_V','ui_in[0]_V','rst_n_V','ena_V','i_VDD_A']+[n+'_V' for n in unused]+['VPWR_V','VGND_V']
 (out/'columns.json').write_text(json.dumps(columns,indent=2)+'\n')
@@ -264,3 +264,4 @@ if a.case=='b':
 (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 print(json.dumps({k:v for k,v in summary.items() if k not in ['errors','conversions']},indent=2),flush=True)
 if not summary['passed']:raise SystemExit('Measured continuous BSIM waveform checks failed; inspect preserved data')
+
