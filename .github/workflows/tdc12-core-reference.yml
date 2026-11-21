@@ -1,0 +1,38 @@
+name: TDC12 independent core only layout reference
+on:
+  push:
+    branches: ['verification/tdc12-academic-report']
+    paths:
+      - '.github/workflows/tdc12-core-reference.yml'
+      - 'verification/academic_layout/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  harden_core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned OpenLane and PDK fetch dependencies
+        run: python -m pip install openlane==2.2.9 requests zstandard
+      - name: Fetch the exact PDK used by the final wrapped macro
+        run: python verification/tdc12_b1c7dec/scripts/fetch_exact_pdk.py
+      - name: Independently harden the unchanged pulse width core
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" ghcr.io/efabless/openlane2:2.2.9 openlane --pdk-root "$GITHUB_WORKSPACE/verification/.tooling/pdk_8afc8346" --manual-pdk --pdk sky130A --run-tag core_reference verification/academic_layout/config.json
+      - name: Preserve the independent core layout and checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdc12-core-only-reference
+          path: verification/academic_layout/
+          retention-days: 90
+          compression-level: 6
+

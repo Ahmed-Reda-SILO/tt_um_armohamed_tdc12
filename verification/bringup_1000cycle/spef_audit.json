@@ -1,0 +1,156 @@
+{
+  "artifact_sha256": "952a299af36d01275f855d8b7e26f49d5091e078681d8da6b15929eda6e263be",
+  "spef_member": "runs/wokwi/final/spef/nom/tt_um_armohamed_tdc12.nom.spef",
+  "spef_sha256": "f3bf5003ab529abd6a06111519f8619e7610bb2e9ec226957362e14a28939512",
+  "header": "*SPEF \"ieee 1481-1999\"\n*DESIGN \"tt_um_armohamed_tdc12\"\n*DATE \"10:55:17 Thursday November 19, 2026\"\n*VENDOR \"The OpenROAD Project\"\n*PROGRAM \"OpenROAD\"\n*VERSION \"dcf36133a369abc8f3c5e5738cd4d82e4903c0e0\"\n*DESIGN_FLOW \"NAME_SCOPE LOCAL\" \"PIN_CAP NONE\"\n*DIVIDER /\n*DELIMITER :\n*BUS_DELIMITER []\n*T_UNIT 1 NS\n*C_UNIT 1 PF\n*R_UNIT 1 OHM\n*L_UNIT 1 HENRY\n\n",
+  "positive_ground_cap_rows": 570,
+  "resistor_rows": 487,
+  "positive_coupling_rows": 1394,
+  "unique_coupling_endpoint_pairs": 697,
+  "duplicated_pairs": 697,
+  "invalid_duplicate_groups": [],
+  "raw_coupling_pf_sum": 0.16051658678,
+  "unique_coupling_pf_sum": 0.08025829339,
+  "duplicate_examples": [
+    [
+      {
+        "owner": "*3",
+        "a": "*4512:A",
+        "b": "*111:81",
+        "pf": 6.97847e-05
+      },
+      {
+        "owner": "*111",
+        "a": "*4512:A",
+        "b": "*111:81",
+        "pf": 6.97847e-05
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*4512:A",
+        "b": "*157:14",
+        "pf": 0.000116527
+      },
+      {
+        "owner": "*157",
+        "a": "*4512:A",
+        "b": "*157:14",
+        "pf": 0.000116527
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:18",
+        "b": "*4472:CLK",
+        "pf": 0.000171567
+      },
+      {
+        "owner": "*115",
+        "a": "*3:18",
+        "b": "*4472:CLK",
+        "pf": 0.000171567
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:18",
+        "b": "*4523:A",
+        "pf": 0.000178888
+      },
+      {
+        "owner": "*121",
+        "a": "*3:18",
+        "b": "*4523:A",
+        "pf": 0.000178888
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:18",
+        "b": "*4540:A",
+        "pf": 6.2744e-05
+      },
+      {
+        "owner": "*4",
+        "a": "*3:18",
+        "b": "*4540:A",
+        "pf": 6.2744e-05
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:18",
+        "b": "*4541:A",
+        "pf": 1.63602e-05
+      },
+      {
+        "owner": "*5",
+        "a": "*3:18",
+        "b": "*4541:A",
+        "pf": 1.63602e-05
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:30",
+        "b": "*4413:A",
+        "pf": 5.16149e-05
+      },
+      {
+        "owner": "*147",
+        "a": "*3:30",
+        "b": "*4413:A",
+        "pf": 5.16149e-05
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:30",
+        "b": "*4423:B",
+        "pf": 3.31665e-05
+      },
+      {
+        "owner": "*98",
+        "a": "*3:30",
+        "b": "*4423:B",
+        "pf": 3.31665e-05
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:30",
+        "b": "*4426:A2",
+        "pf": 0.000114961
+      },
+      {
+        "owner": "*100",
+        "a": "*3:30",
+        "b": "*4426:A2",
+        "pf": 0.000114961
+      }
+    ],
+    [
+      {
+        "owner": "*3",
+        "a": "*3:30",
+        "b": "*4449:A2",
+        "pf": 6.40875e-06
+      },
+      {
+        "owner": "*147",
+        "a": "*3:30",
+        "b": "*4449:A2",
+        "pf": 6.40875e-06
+      }
+    ]
+  ]
+}
